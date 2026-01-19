@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard – Investimentos Mídia Online</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  body {
+    background: linear-gradient(135deg, #0b1a3a, #102a54);
+    color: #f9fafb;
+    padding: 24px;
+  }
+
+  .dashboard-container {
+    max-width: 1250px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* HEADER */
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .logo-header {
+    max-width: 150px;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .header-text h1 {
+    font-size: 2.1rem;
+    margin-bottom: 4px;
+  }
+
+  .header-text .subtitle {
+    font-size: 1rem;
+    opacity: 0.85;
+  }
+
+  /* CARDS */
+  .grid-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 55px;
+  }
+
+  .card {
+    background: rgba(15,23,42,0.96);
+    border-radius: 18px;
+    padding: 24px 26px;
+    border: 1px solid rgba(148,163,184,0.25);
+    box-shadow: 0 18px 42px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    /* animação de entrada */
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .card.mostrar {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .card-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .card-subtitle {
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+
+  .pill {
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid #38bdf8;
+    background: rgba(56,189,248,0.15);
+    color: #7dd3fc;
+  }
+
+  .card-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .metric {
+    flex: 1;
+    min-width: 160px;
+    background: rgba(20,30,50,0.9);
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(148,163,184,0.25);
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    opacity: 0.75;
+  }
+
+  .metric-value {
+    font-size: 1.1rem;
+    margin-top: 3px;
+    font-weight: 700;
+  }
+
+  .card-chart {
+    margin-top: 10px;
+    height: 320px;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  footer {
+    margin-top: 40px;
+    font-size: 0.8rem;
+    opacity: 0.75;
+    text-align: center;
+  }
+
+  /* ===== ALERTA PARA USO EM MODO PAISAGEM (CELULAR) ===== */
+
+  #alerta-paisagem {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -120px; /* começa escondido */
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(148,163,184,0.4);
+    box-shadow: 0 18px 42px rgba(0,0,0,0.6);
+    padding: 12px 18px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    color: #e5e7eb;
+    font-size: 0.85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.5s ease;
+  }
+
+  #alerta-paisagem .emoji {
+    font-size: 1.3rem;
+  }
+
+  #alerta-paisagem.mostrar {
+    opacity: 1;
+    bottom: 24px;
+  }
+
+  /* ===== LOGIN (ADICIONADO, SEM MEXER NO DASHBOARD) ===== */
+  #login-screen {
+    position: fixed;
+    inset: 0;
+    display: none; /* a lógica JS decide */
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0b1a3a, #102a54);
+    z-index: 999999;
+    padding: 24px;
+  }
+
+  .login-box {
+    width: 340px;
+    background: rgba(15,23,42,0.96);
+    border-radius: 18px;
+    padding: 24px 26px;
+    border: 1px solid rgba(148,163,184,0.25);
+    box-shadow: 0 18px 42px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .login-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .login-subtitle {
+    font-size: 0.85rem;
+    opacity: 0.75;
+    margin-bottom: 4px;
+  }
+
+  .login-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148,163,184,0.25);
+    background: rgba(20,30,50,0.9);
+    color: #f9fafb;
+    outline: none;
+  }
+
+  .login-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #38bdf8;
+    background: rgba(56,189,248,0.15);
+    color: #7dd3fc;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .login-erro {
+    min-height: 18px;
+    font-size: 0.85rem;
+    color: #ff8b8b;
+  }
+
+  #dashboard-wrapper {
+    display: none; /* só aparece após login */
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN (ADICIONADO) -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">Acesso Restrito</div>
+    <div class="login-subtitle">Digite a senha para carregar o dashboard</div>
+    <input class="login-input" type="password" id="senha" placeholder="Digite a senha" />
+    <button class="login-btn" onclick="login()">Entrar</button>
+    <div class="login-erro" id="erro-login"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD ORIGINAL (APENAS ENVOLVIDO) -->
+<div id="dashboard-wrapper">
+
+  <!-- ALERTA MOBILE -->
+  <div id="alerta-paisagem">
+    <span class="emoji">📱</span>
+    <span>Para visualizar melhor, use o celular na horizontal (modo paisagem).</span>
+  </div>
+
+  <div class="dashboard-container">
+
+    <header class="header-row">
+      <img src="https://aquaticapark.net/temp-aquatica/dashboard/Logo-Padr%C3%A3o-Aguas.png"
+           class="logo-header" alt="Logo Aquática">
+      <div class="header-text">
+        <h1>Investimentos de Mídia Online – Janeiro</h1>
+        <p class="subtitle">Dashboard analítico – Aquática American Park</p>
+      </div>
+    </header>
+
+    <main class="grid-cards">
+
+      <!-- 1️⃣ META ADS – INVESTIMENTO DIÁRIO -->
+      <section class="card">
+        <div class="card-header-top">
+          <div>
+            <div class="card-title">Meta Ads – Investimento Diário 2026</div>
+            <div class="card-subtitle">Comparação entre o orçado (6%) e o realizado diário</div>
+          </div>
+          <span class="pill">META ADS</span>
+        </div>
+
+        <div class="card-metrics">
+          <div class="metric">
+            <div class="metric-label">Total Orçado</div>
+            <div class="metric-value" id="meta-total-orcado">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Total Investido</div>
+            <div class="metric-value" id="meta-total-real">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Diferença</div>
+            <div class="metric-value" id="meta-total-diferenca">R$ 0</div>
+          </div>
+        </div>
+
+        <div class="card-chart">
+          <canvas id="chart-meta"></canvas>
+        </div>
+      </section>
+
+      <!-- 2️⃣ GOOGLE ADS – INVESTIMENTO DIÁRIO -->
+      <section class="card">
+        <div class="card-header-top">
+          <div>
+            <div class="card-title">Google Ads – Investimento Diário</div>
+            <div class="card-subtitle">Comparação entre o orçado (2%) e o realizado diário</div>
+          </div>
+          <span class="pill">GOOGLE ADS</span>
+        </div>
+
+        <div class="card-metrics">
+          <div class="metric">
+            <div class="metric-label">Total Orçado</div>
+            <div class="metric-value" id="google-total-orcado">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Total Investido</div>
+            <div class="metric-value" id="google-total-real">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Diferença</div>
+            <div class="metric-value" id="google-total-diferenca">R$ 0</div>
+          </div>
+        </div>
+
+        <div class="card-chart">
+          <canvas id="chart-google"></canvas>
+        </div>
+      </section>
+
+      <!-- 3️⃣ ANA CASTELA – CAMPANHA ONLINE -->
+      <section class="card">
+        <div class="card-header-top">
+          <div>
+            <div class="card-title">Ana Castela – Campanha Online</div>
+            <div class="card-subtitle">Investimento real diário (Meta Ads)</div>
+          </div>
+          <span class="pill">ANA CASTELA</span>
+        </div>
+
+        <!-- ✅ AJUSTE: agora tem 3 métricas -->
+        <div class="card-metrics">
+          <div class="metric">
+            <div class="metric-label">Total Orçado</div>
+            <div class="metric-value" id="ana-total-orcado">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Total Investido</div>
+            <div class="metric-value" id="ana-total-real">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Diferença</div>
+            <div class="metric-value" id="ana-total-diferenca">R$ 0</div>
+          </div>
+        </div>
+
+        <div class="card-chart">
+          <canvas id="chart-ana"></canvas>
+        </div>
+      </section>
+
+      <!-- 4️⃣ TOTAL MÍDIA ONLINE – ORÇADO -->
+      <section class="card">
+        <div class="card-header-top">
+          <div>
+            <div class="card-title">Total de Mídia Online</div>
+            <div class="card-subtitle">Soma diária (Meta + Google): Orçado × Real</div>
+          </div>
+          <span class="pill">ORÇAMENTO TOTAL</span>
+        </div>
+
+        <!-- ✅ AJUSTE: agora tem 3 métricas -->
+        <div class="card-metrics">
+          <div class="metric">
+            <div class="metric-label">Total Orçado</div>
+            <div class="metric-value" id="total-midia-orcado">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Total Investido</div>
+            <div class="metric-value" id="total-midia-real">R$ 0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Diferença</div>
+            <div class="metric-value" id="total-midia-diferenca">R$ 0</div>
+          </div>
+        </div>
+
+        <div class="card-chart">
+          <canvas id="chart-total-midia"></canvas>
+        </div>
+      </section>
+
+      <!-- 5️⃣ PROJEÇÃO DE VENDAS – JANEIRO -->
+      <section class="card">
+        <div class="card-header-top">
+          <div>
+            <div class="card-title">Projeção de Vendas – Janeiro</div>
+            <div class="card-subtitle">Projeção diária oficial da planilha</div>
+          </div>
+          <span class="pill">ORÇADO</span>
+        </div>
+
+        <div class="card-metrics">
+          <div class="metric">
+            <div class="metric-label">Total projetado</div>
+            <div class="metric-value" id="total-projecao">R$ 0</div>
+          </div>
+        </div>
+
+        <div class="card-chart">
+          <canvas id="chart-projecao"></canvas>
+        </div>
+      </section>
+
+    </main>
+
+    <footer>
+      Marketing – Aquática American Park
+    </footer>
+
+  </div>
+
+</div>
+
+<script>
+  /* ===== CONFIG API ===== */
+  const API_URL = "https://script.google.com/macros/s/AKfycbwIXYy2NY_cCOWlDehIr-tp5hGNRvfg7qy21oMhwBiFfRQ5uGHVpsnxTtZFjFlOpLRz0Q/exec"; // <<< COLE A URL DO WEB APP AQUI
+
+  /* ===== LOGIN ===== */
+  const SENHA_CORRETA = "Aquatica2026"; // TROQUE AQUI se quiser
+  const AUTH_KEY = "dashboard_auth_ok";
+  let dashboardIniciado = false;
+
+  function mostrarLogin() {
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("dashboard-wrapper").style.display = "none";
+  }
+
+  function mostrarDashboard() {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("dashboard-wrapper").style.display = "block";
+  }
+
+  function login() {
+    const senha = document.getElementById("senha").value || "";
+    if (senha === SENHA_CORRETA) {
+      localStorage.setItem(AUTH_KEY, "1");
+      document.getElementById("erro-login").textContent = "";
+      carregarDadosEIniciar();
+    } else {
+      document.getElementById("erro-login").textContent = "Senha incorreta";
+    }
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && document.getElementById("login-screen").style.display !== "none") {
+      login();
+    }
+  });
+
+  /* ===== DADOS (VÃO VIR DA API) ===== */
+  let metaOrcado = [];
+  let metaReal = [];
+  let googleOrcado = [];
+  let googleReal = [];
+  let totalMidiaOrcado = [];
+  let totalMidiaReal = []; // ✅ ADICIONADO (calculado)
+  let projecaoVendas = [];
+  let anaOrcado = [];
+  let anaReal = [];
+
+  /* ===== HELPERS ===== */
+  const diasLabels = Array.from({length: 31}, (_, i) => `${String(i+1).padStart(2,"0")}/01`);
+
+  function formatBRL(valor) {
+    return (Number(valor) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function sum(arr) {
+    return (arr || []).reduce((a,b) => a + (Number(b) || 0), 0);
+  }
+
+  // ✅ CORTA LINHA REAL ATÉ HOJE (amanhã ela "anda" sozinha)
+  function cortarAteHoje(arr) {
+    const hoje = new Date().getDate(); // 1..31
+    return (arr || []).map((v, i) => (i < hoje ? v : null));
+  }
+
+  function criarGraficoLinhaDupla(ctx, dados1, label1, dados2, label2) {
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: diasLabels,
+        datasets: [
+          {
+            label: label1,
+            data: dados1,
+            borderColor: "#38bdf8",
+            backgroundColor: "rgba(56,189,248,0.2)",
+            borderWidth: 2,
+            tension: 0.35
+            // ✅ ORÇADO: linha normal (sem tracejado)
+          },
+          {
+            label: label2,
+            data: dados2,
+            borderColor: "#fb923c",
+            backgroundColor: "rgba(251,146,60,0.2)",
+            borderWidth: 2,
+            tension: 0.35
+          }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  function criarGraficoLinhaSimples(ctx, dados, label) {
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: diasLabels,
+        datasets: [
+          { label, data: dados, borderColor: "#38bdf8", backgroundColor: "rgba(56,189,248,0.2)", borderWidth: 2, tension: 0.35 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  /* ===== PUXA API E INICIA ===== */
+  function carregarDadosEIniciar() {
+    mostrarDashboard();
+
+    fetch(API_URL, { cache: "no-store" })
+      .then(res => res.json())
+      .then(dados => {
+        // ✅ não matar 0 (0 é válido)
+        const norm = (arr) => (arr || []).map(v => (v === undefined || v === "" ? null : v));
+
+        metaOrcado = norm(dados.metaOrcado);
+        metaReal = norm(dados.metaReal);
+        googleOrcado = norm(dados.googleOrcado);
+        googleReal = norm(dados.googleReal);
+        totalMidiaOrcado = norm(dados.totalMidiaOrcado);
+        projecaoVendas = norm(dados.projecaoVendas);
+
+        anaOrcado = norm(dados.anaOrcado);
+        anaReal   = cortarAteHoje(norm(dados.anaReal)); // ✅ só até hoje
+
+        // ✅ Total Mídia REAL calculado (MetaReal + GoogleReal) e também cortado até hoje
+        totalMidiaReal = cortarAteHoje(
+          Array.from({length: 31}, (_, i) => (Number(metaReal[i]) || 0) + (Number(googleReal[i]) || 0))
+        );
+
+        iniciarDashboard();
+      })
+      .catch(err => {
+        console.error("Erro ao carregar API:", err);
+        alert("Erro ao carregar dados da planilha. Verifique a URL da API.");
+      });
+  }
+
+  function iniciarDashboard() {
+    if (dashboardIniciado) return;
+    dashboardIniciado = true;
+
+    /* Totais */
+    document.getElementById("meta-total-orcado").textContent = formatBRL(sum(metaOrcado));
+    document.getElementById("meta-total-real").textContent = formatBRL(sum(metaReal));
+    document.getElementById("meta-total-diferenca").textContent = formatBRL(sum(metaReal) - sum(metaOrcado));
+
+    document.getElementById("google-total-orcado").textContent = formatBRL(sum(googleOrcado));
+    document.getElementById("google-total-real").textContent = formatBRL(sum(googleReal));
+    document.getElementById("google-total-diferenca").textContent = formatBRL(sum(googleReal) - sum(googleOrcado));
+
+    // ✅ TOTAL MÍDIA (orçado + real + diferença)
+    document.getElementById("total-midia-orcado").textContent = formatBRL(sum(totalMidiaOrcado));
+    document.getElementById("total-midia-real").textContent = formatBRL(sum(totalMidiaReal));
+    document.getElementById("total-midia-diferenca").textContent = formatBRL(sum(totalMidiaReal) - sum(totalMidiaOrcado));
+
+    document.getElementById("total-projecao").textContent = formatBRL(sum(projecaoVendas));
+
+    // ✅ ANA CASTELA (orçado + real + diferença)
+    document.getElementById("ana-total-orcado").textContent = formatBRL(sum(anaOrcado));
+    document.getElementById("ana-total-real").textContent = formatBRL(sum(anaReal));
+    document.getElementById("ana-total-diferenca").textContent = formatBRL(sum(anaReal) - sum(anaOrcado));
+
+    /* Gráficos */
+    criarGraficoLinhaDupla(
+      document.getElementById("chart-meta"),
+      metaOrcado, "Meta Orçado",
+      metaReal, "Meta Real"
+    );
+
+    criarGraficoLinhaDupla(
+      document.getElementById("chart-google"),
+      googleOrcado, "Google Orçado",
+      googleReal, "Google Real"
+    );
+
+    // ✅ ANA CASTELA com 2 linhas
+    criarGraficoLinhaDupla(
+      document.getElementById("chart-ana"),
+      anaOrcado, "Ana Castela – Orçado",
+      anaReal,   "Ana Castela – Real"
+    );
+
+    // ✅ TOTAL MÍDIA com 2 linhas (Orçado vs Real)
+    criarGraficoLinhaDupla(
+      document.getElementById("chart-total-midia"),
+      totalMidiaOrcado, "Total Mídia – Orçado",
+      totalMidiaReal,   "Total Mídia – Real"
+    );
+
+    criarGraficoLinhaSimples(
+      document.getElementById("chart-projecao"),
+      projecaoVendas,
+      "Projeção de Vendas"
+    );
+
+    /* Animação de entrada dos cards */
+    const cards = document.querySelectorAll(".card");
+    cards.forEach((card, index) => {
+      setTimeout(() => {
+        card.classList.add("mostrar");
+      }, 150 * index);
+    });
+
+    /* Alerta para uso em modo paisagem */
+    const alerta = document.getElementById("alerta-paisagem");
+
+    function mostrarAlertaPaisagem() {
+      if (window.innerWidth <= 900) {
+        alerta.classList.add("mostrar");
+        clearTimeout(alerta._timer);
+        alerta._timer = setTimeout(() => {
+          alerta.classList.remove("mostrar");
+        }, 6000);
+      } else {
+        alerta.classList.remove("mostrar");
+      }
+    }
+
+    mostrarAlertaPaisagem();
+  }
+
+  // Decide o que mostrar ao abrir a página
+  document.addEventListener("DOMContentLoaded", () => {
+    const ok = localStorage.getItem(AUTH_KEY) === "1";
+    if (ok) {
+      carregarDadosEIniciar();
+    } else {
+      mostrarLogin();
+    }
+  });
+</script>
+
+</body>
+</html>
